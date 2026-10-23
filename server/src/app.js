@@ -193,6 +193,18 @@ export function createApp(db, { rateLimits = true } = {}) {
     res.json(rows.map(shape));
   });
 
+  // Workouts the caller has favorited, most recently favorited first. Unpublished ones are hidden
+  // (but keep their favorite) and reappear if the author republishes.
+  app.get('/api/workouts/favorites', requireAuth, (req, res) => {
+    const rows = db
+      .prepare(
+        `${workoutSelect(req.user.id)} JOIN favorites fv ON fv.workout_id = w.id AND fv.user_id = ?
+         WHERE w.is_published = 1 ORDER BY fv.created_at DESC, w.id DESC`
+      )
+      .all(req.user.id);
+    res.json(rows.map(shape));
+  });
+
   app.post('/api/workouts', requireAuth, writeLimiter, (req, res) => {
     const { name, description, lines } = parseWorkout(req.body);
     const id = db.transaction(() => {

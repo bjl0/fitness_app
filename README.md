@@ -22,7 +22,7 @@ Set `JWT_SECRET` (and optionally `DB_FILE`, `PORT`) for anything beyond local us
 All five flows from the spec: browse/filter exercises, build a workout (drag or arrow-button reordering,
 sets/reps-or-duration/rest, notes; draft persists locally), publish/unpublish, ranked feed
 (separate **Top favorited** and **Most comments** rankings plus **New**, filterable by muscle/equipment),
-favorites + comments, and **copying** any published workout into your own library as a private draft.
+favorites + comments, a **Favorited workouts** page (everything you've favorited, saved automatically), and **copying** any published workout into your own library as a private draft.
 
 Rules enforced server-side: owner-only edit/delete/publish; no self-favorites; one favorite per user
 (composite PK); comments only on published workouts, 1–1000 chars, deletable by author or workout owner;

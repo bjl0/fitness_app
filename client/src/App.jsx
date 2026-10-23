@@ -4,6 +4,7 @@ import Library from './pages/Library.jsx';
 import Builder from './pages/Builder.jsx';
 import MyWorkouts from './pages/MyWorkouts.jsx';
 import Feed from './pages/Feed.jsx';
+import Favorites from './pages/Favorites.jsx';
 import WorkoutDetail from './pages/WorkoutDetail.jsx';
 import Auth from './pages/Auth.jsx';
 
@@ -25,6 +26,7 @@ export default function App() {
           <NavLink to="/feed">Feed</NavLink>
           <NavLink to="/build">Builder{draft.lines.length > 0 && <span className="badge">{draft.lines.length}</span>}</NavLink>
           <NavLink to="/mine">My workouts</NavLink>
+          <NavLink to="/favorites">Favorited</NavLink>
         </nav>
         <div className="who">
           {user ? (
@@ -45,6 +47,7 @@ export default function App() {
           <Route path="/build" element={<Builder />} />
           <Route path="/build/:id" element={<RequireAuth><Builder /></RequireAuth>} />
           <Route path="/mine" element={<RequireAuth><MyWorkouts /></RequireAuth>} />
+          <Route path="/favorites" element={<RequireAuth><Favorites /></RequireAuth>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="*" element={<p className="empty">Page not found.</p>} />
         </Routes>

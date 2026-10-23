@@ -218,3 +218,25 @@ test('copy: creates a private draft owned by the copier', async () => {
   const orig = await call('GET', `/workouts/${id}`);
   assert.equal(orig.body.exercises.length, 2); // original untouched
 });
+
+test('favorited workouts list: only my favorites, published only, updates on unfavorite', async () => {
+  const a = await user('fl_author');
+  const b = await user('fl_b');
+  const c = await user('fl_c');
+  const w1 = await published(a, 'First');
+  const w2 = await published(a, 'Second');
+  await call('PUT', `/workouts/${w1}/favorite`, { token: b });
+  await call('PUT', `/workouts/${w2}/favorite`, { token: b });
+  await call('PUT', `/workouts/${w1}/favorite`, { token: c });
+  assert.equal((await call('GET', '/workouts/favorites')).status, 401);
+  const ids = async (t) => (await call('GET', '/workouts/favorites', { token: t })).body.map((w) => w.id);
+  assert.deepEqual((await ids(b)).sort(), [w1, w2].sort());
+  assert.deepEqual(await ids(c), [w1]);
+  assert.equal((await call('GET', '/workouts/favorites', { token: b })).body[0].viewer_has_favorited, true);
+  await call('DELETE', `/workouts/${w1}/favorite`, { token: b });
+  assert.deepEqual(await ids(b), [w2]);
+  await call('POST', `/workouts/${w2}/unpublish`, { token: a });
+  assert.deepEqual(await ids(b), []);
+  await call('POST', `/workouts/${w2}/publish`, { token: a });
+  assert.deepEqual(await ids(b), [w2]);
+});

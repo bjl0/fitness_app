@@ -180,3 +180,41 @@ test('deleting a workout cascades', async () => {
   assert.equal(db.prepare('SELECT COUNT(*) n FROM comments WHERE workout_id = ?').get(id).n, 0);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM workout_exercises WHERE workout_id = ?').get(id).n, 0);
 });
+
+test('feed sort=comments ranks by comments, separate from favorites', async () => {
+  const author = await user('cs_author');
+  const f1 = await user('cs_f1');
+  const f2 = await user('cs_f2');
+  const faved = await published(author, 'Most faved', [1]);
+  const talked = await published(author, 'Most talked', [2]);
+  await call('PUT', `/workouts/${faved}/favorite`, { token: f1 });
+  await call('PUT', `/workouts/${faved}/favorite`, { token: f2 });
+  for (const t of [f1, f2, f1]) await call('POST', `/workouts/${talked}/comments`, { token: t, body: { body: 'hey' } });
+  const ids = (r) => r.body.items.map((w) => w.id).filter((i) => [faved, talked].includes(i));
+  assert.deepEqual(ids(await call('GET', '/feed?sort=top')), [faved, talked]);
+  assert.deepEqual(ids(await call('GET', '/feed?sort=comments')), [talked, faved]);
+});
+
+test('copy: creates a private draft owned by the copier', async () => {
+  const a = await user('cp_owner');
+  const b = await user('cp_b');
+  const w = await call('POST', '/workouts', {
+    token: a,
+    body: { name: 'Original', description: 'd', exercises: [{ exercise_id: 50, sets: 4, duration_sec: 30, rest_sec: 15, notes: 'n' }, ...lines(1)] },
+  });
+  const id = w.body.id;
+  assert.equal((await call('POST', `/workouts/${id}/copy`, { token: b })).status, 404); // still a private draft
+  await call('POST', `/workouts/${id}/publish`, { token: a });
+  assert.equal((await call('POST', `/workouts/${id}/copy`)).status, 401);
+  const c = await call('POST', `/workouts/${id}/copy`, { token: b });
+  assert.equal(c.status, 201);
+  assert.equal(c.body.name, 'Copy of Original');
+  assert.equal(c.body.author, 'cp_b');
+  assert.equal(c.body.is_published, false);
+  assert.equal(c.body.favorite_count, 0);
+  assert.deepEqual(c.body.exercises.map((e) => [e.exercise_id, e.position, e.sets, e.duration_sec, e.rest_sec, e.notes]),
+    [[50, 0, 4, 30, 15, 'n'], [1, 1, 3, null, 60, null]]);
+  assert.equal((await call('GET', `/workouts/${c.body.id}`)).status, 404); // private to the copier
+  const orig = await call('GET', `/workouts/${id}`);
+  assert.equal(orig.body.exercises.length, 2); // original untouched
+});

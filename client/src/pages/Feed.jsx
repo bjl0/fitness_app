@@ -30,8 +30,9 @@ export default function Feed() {
       <div className="row between">
         <h1>Community feed</h1>
         <div className="seg" role="group" aria-label="Sort">
-          <button className={f.sort === 'top' ? 'on' : ''} onClick={() => setFilter('sort')('top')}>Top</button>
-          <button className={f.sort === 'new' ? 'on' : ''} onClick={() => setFilter('sort')('new')}>New</button>
+          {[['top', 'Top favorited'], ['comments', 'Most comments'], ['new', 'New']].map(([k, label]) => (
+            <button key={k} className={f.sort === k ? 'on' : ''} onClick={() => setFilter('sort')(k)}>{label}</button>
+          ))}
         </div>
       </div>
       <Chips label="Muscle" options={meta.muscles} value={f.muscle} onChange={setFilter('muscle')} />
@@ -41,7 +42,7 @@ export default function Feed() {
       <div className="grid">
         {res?.items.map((w, i) => (
           <div key={w.id} className="ranked">
-            {f.sort === 'top' && <span className="rank">#{(page - 1) * 20 + i + 1}</span>}
+            {f.sort !== 'new' && <span className="rank">#{(page - 1) * 20 + i + 1}</span>}
             <WorkoutCard workout={w} onChange={replace} />
           </div>
         ))}

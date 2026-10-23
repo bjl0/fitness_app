@@ -21,7 +21,8 @@ Set `JWT_SECRET` (and optionally `DB_FILE`, `PORT`) for anything beyond local us
 
 All five flows from the spec: browse/filter exercises, build a workout (drag or arrow-button reordering,
 sets/reps-or-duration/rest, notes; draft persists locally), publish/unpublish, ranked feed
-(favorites → comments → newest, filter by muscle/equipment, or sort by new), and favorites + comments.
+(separate **Top favorited** and **Most comments** rankings plus **New**, filterable by muscle/equipment),
+favorites + comments, and **copying** any published workout into your own library as a private draft.
 
 Rules enforced server-side: owner-only edit/delete/publish; no self-favorites; one favorite per user
 (composite PK); comments only on published workouts, 1–1000 chars, deletable by author or workout owner;
@@ -31,5 +32,3 @@ counters maintained by SQL triggers; bcrypt password hashing; rate limits on aut
 ## Deliberately left out of the prototype
 
 - Comment report button / hidden flag, email verification (spec's open questions / pre-launch safeguards)
-- "Copy someone's workout" (spec open question)
-- Blended ranking score (`rank_score`); ranking uses the spec's drafted favorites-first order

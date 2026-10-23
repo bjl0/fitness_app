@@ -245,6 +245,25 @@ export function createApp(db, { rateLimits = true } = {}) {
   app.post('/api/workouts/:id/publish', requireAuth, setPublished(true));
   app.post('/api/workouts/:id/unpublish', requireAuth, setPublished(false));
 
+  // Copy a published workout (or one of your own) into the caller's library as a private draft.
+  app.post('/api/workouts/:id/copy', requireAuth, writeLimiter, (req, res) => {
+    const src = db.prepare('SELECT * FROM workouts WHERE id = ?').get(req.params.id);
+    if (!src || (!src.is_published && src.user_id !== req.user.id)) throw new HttpError(404, 'Workout not found');
+    const id = db.transaction(() => {
+      const wid = Number(
+        db.prepare('INSERT INTO workouts (user_id, name, description) VALUES (?, ?, ?)')
+          .run(req.user.id, `Copy of ${src.name}`.slice(0, 100), src.description).lastInsertRowid
+      );
+      db.prepare(
+        `INSERT INTO workout_exercises (workout_id, exercise_id, position, sets, reps, duration_sec, rest_sec, notes)
+         SELECT ?, exercise_id, position, sets, reps, duration_sec, rest_sec, notes
+         FROM workout_exercises WHERE workout_id = ?`
+      ).run(wid, src.id);
+      return wid;
+    })();
+    res.status(201).json(detail(id, req.user));
+  });
+
   // ---- feed ---------------------------------------------------------------
   app.get('/api/feed', optionalAuth, (req, res) => {
     const where = ['w.is_published = 1'];
@@ -260,11 +279,13 @@ export function createApp(db, { rateLimits = true } = {}) {
                           WHERE we.workout_id = w.id AND e.equipment = ?)`);
       args.push(equipment);
     }
-    // "top" ranks by favorites, then comments, then newest (see spec: Ranking).
-    const order =
-      req.query.sort === 'new'
-        ? 'w.published_at DESC, w.id DESC'
-        : 'w.favorite_count DESC, w.comment_count DESC, w.published_at DESC, w.id DESC';
+    // Separate rankings: "top" = most favorited, "comments" = most commented, "new" = newest.
+    const ORDERS = {
+      top: 'w.favorite_count DESC, w.comment_count DESC, w.published_at DESC, w.id DESC',
+      comments: 'w.comment_count DESC, w.favorite_count DESC, w.published_at DESC, w.id DESC',
+      new: 'w.published_at DESC, w.id DESC',
+    };
+    const order = ORDERS[req.query.sort] || ORDERS.top;
     const page = Math.max(1, toInt(req.query.page) || 1);
     const clause = where.join(' AND ');
     const total = db.prepare(`SELECT COUNT(*) n FROM workouts w WHERE ${clause}`).get(...args).n;

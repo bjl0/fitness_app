@@ -37,6 +37,13 @@ export default function WorkoutDetail() {
       setComments((cs) => [...cs, c]); bump(1); setBody(''); setError('');
     } catch (err) { alert(err.message); } finally { setPosting(false); }
   }
+  async function copy() {
+    if (!user) return nav('/auth', { state: { from: `/workouts/${id}` } });
+    try {
+      await api('POST', `/workouts/${id}/copy`);
+      nav('/mine');
+    } catch (err) { alert(err.message); }
+  }
   async function del(c) {
     try {
       await api('DELETE', `/comments/${c.id}`);
@@ -48,7 +55,10 @@ export default function WorkoutDetail() {
     <article className="narrow">
       <div className="row between">
         <h1>{w.name}</h1>
-        {own && <Link className="btn small" to={`/build/${w.id}`}>Edit</Link>}
+        <span className="row gap">
+          <button className="btn small" onClick={copy}>Copy to my workouts</button>
+          {own && <Link className="btn small" to={`/build/${w.id}`}>Edit</Link>}
+        </span>
       </div>
       <p className="muted">by {w.author}{!w.is_published && ' · Draft (only you can see this)'}</p>
       <div className="tags">{w.muscle_groups.map((m) => <span key={m} className="tag">{m}</span>)}</div>
